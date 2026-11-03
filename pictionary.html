@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>你画我猜 - WH1L2X</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #121212; color: #ffffff; line-height: 1.6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        header { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); z-index: 100; }
+        nav { max-width: 800px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { text-decoration: none; color: #ffffff; font-weight: 500; font-size: 0.95rem; }
+        .back-btn:hover { opacity: 0.7; }
+        .logo { font-size: 1.2rem; font-weight: bold; color: #ffffff; text-decoration: none; }
+
+        .game-container { flex: 1; display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%; padding: 15px; overflow: hidden; }
+
+        /* 顶部题目区域（修改了布局） */
+        .topic-area { display: flex; gap: 8px; margin-bottom: 15px; }
+        .topic-area input {
+            flex: 1; padding: 12px; font-size: 1rem; background-color: #2c2c2e;
+            color: #ffffff; border: 1px solid #444; border-radius: 8px; outline: none;
+        }
+        .topic-area input:focus { border-color: #ffffff; }
+        
+        /* 按钮通用样式 */
+        .btn { padding: 0 12px; background-color: #ffffff; color: #000; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+        .btn:hover { background-color: #ccc; }
+        /* 随机抽题按钮特殊样式 */
+        .btn-random { background-color: #2c2c2e; color: #fff; border: 1px solid #444; }
+        .btn-random:hover { background-color: #3a3a3c; }
+
+        /* 工具栏 */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .tool-group { display: flex; gap: 8px; align-items: center; }
+        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #444; cursor: pointer; transition: 0.2s; }
+        .color-btn.active { border-color: #ffffff; transform: scale(1.1); }
+        .color-white { background-color: #ffffff; }
+        .color-gray { background-color: #888888; }
+        .color-red { background-color: #ff4d4d; }
+        .size-btn { background-color: #2c2c2e; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        .size-btn.active { background-color: #ffffff; color: #000; }
+        .action-btn { background-color: #2c2c2e; color: #fff; border: 1px solid #444; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .action-btn:hover { background-color: #3a3a3c; }
+
+        /* 画布 */
+        .canvas-wrapper { flex: 1; position: relative; background-color: #1e1e1e; border-radius: 12px; overflow: hidden; border: 1px solid #444; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+        canvas { display: block; cursor: crosshair; touch-action: none; }
+        .hint-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #444; pointer-events: none; font-size: 1.2rem; text-align: center; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="secret.html" class="back-btn">← 返回</a>
+            <a href="index.html" class="logo">WH1L2X</a>
+        </nav>
+    </header>
+
+    <div class="game-container">
+        <!-- 题目设置区 -->
+        <div class="topic-area">
+            <input type="text" id="topicInput" placeholder="输入题目，或点击右侧随机抽题...">
+            <button class="btn btn-random" onclick="getRandomTopic()">🎲 随机抽题</button>
+            <button class="btn" id="toggleBtn" onclick="toggleTopic()">隐藏题目</button>
+        </div>
+
+        <div class="toolbar">
+            <div class="tool-group">
+                <div class="color-btn color-white active" onclick="setColor('#ffffff', this)"></div>
+                <div class="color-btn color-gray" onclick="setColor('#888888', this)"></div>
+                <div class="color-btn color-red" onclick="setColor('#ff4d4d', this)"></div>
+            </div>
+            <div class="tool-group">
+                <button class="action-btn" id="eraserBtn" onclick="toggleEraser()">橡皮擦</button>
+                <button class="size-btn" onclick="setSize(3, this)">细</button>
+                <button class="size-btn active" onclick="setSize(6, this)">中</button>
+                <button class="size-btn" onclick="setSize(15, this)">粗</button>
+            </div>
+            <button class="action-btn" style="color: #ff4d4d;" onclick="clearCanvas()">清空</button>
+        </div>
+
+        <div class="canvas-wrapper" id="canvasWrapper">
+            <div class="hint-text" id="hintText">在这里画画吧 ✏️</div>
+            <canvas id="drawingCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvasWrapper');
+        const hintText = document.getElementById('hintText');
+        const topicInput = document.getElementById('topicInput');
+        const toggleBtn = document.getElementById('toggleBtn');
+
+        // ===== 新增：预设题库 =====
+        const wordBank = [
+            "太阳", "月亮", "星星", "苹果", "香蕉", "西瓜", "草莓", "小狗", "小猫", "大象",
+            "长颈鹿", "老虎", "兔子", "蝴蝶", "乌龟", "房子", "汽车", "飞机", "自行车", "火车",
+            "雨伞", "眼镜", "手机", "电脑", "电视机", "吉他", "足球", "篮球", "冰淇淋", "汉堡",
+            "披萨", "咖啡", "玫瑰花", "大树", "高山", "河流", "云朵", "下雨", "雪人", "彩虹",
+            "刷牙", "睡觉", "唱歌", "跳舞", "跑步", "放风筝", "游泳", "照镜子", "吃面条", "蒙娜丽莎"
+        ];
+
+        let isDrawing = false;
+        let currentColor = '#ffffff';
+        let currentSize = 6;
+        let isEraser = false;
+        const BG_COLOR = '#1e1e1e';
+
+        // 1. 初始化画布
+        function resizeCanvas() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+            
+            ctx.fillStyle = BG_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tempCanvas, 0, 0);
+            
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 2. 坐标获取
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.type.includes('touch')) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        // 3. 绘画逻辑
+        function startDrawing(e) {
+            isDrawing = true;
+            hintText.style.display = 'none';
+            const pos = getCoordinates(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getCoordinates(e);
+            ctx.lineWidth = currentSize;
+            ctx.strokeStyle = isEraser ? BG_COLOR : currentColor;
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                ctx.closePath();
+                isDrawing = false;
+            }
+        }
+
+        // 4. 绑定事件
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        // 5. 工具栏交互
+        function setColor(color, btn) {
+            currentColor = color;
+            isEraser = false;
+            document.getElementById('eraserBtn').style.backgroundColor = '';
+            document.getElementById('eraserBtn').style.color = '';
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function setSize(size, btn) {
+            currentSize = size;
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function toggleEraser() {
+            isEraser = !isEraser;
+            const eraserBtn = document.getElementById('eraserBtn');
+            if (isEraser) {
+                eraserBtn.style.backgroundColor = '#ffffff';
+                eraserBtn.style.color = '#000000';
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            } else {
+                eraserBtn.style.backgroundColor = '';
+                eraserBtn.style.color = '';
+            }
+        }
+
+        function clearCanvas() {
+            if(confirm('确定要清空画布吗？')) {
+                ctx.fillStyle = BG_COLOR;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                hintText.style.display = 'block';
+            }
+        }
+
+        // 6. 题目相关功能
+        function toggleTopic() {
+            if (topicInput.type === 'text') {
+                topicInput.type = 'password'; 
+                toggleBtn.innerText = '显示题目';
+            } else {
+                topicInput.type = 'text';     
+                toggleBtn.innerText = '隐藏题目';
+            }
+        }
+
+        // ===== 新增：随机抽题功能 =====
+        function getRandomTopic() {
+            // 从题库中随机抽取一个
+            const randomIndex = Math.floor(Math.random() * wordBank.length);
+            const randomWord = wordBank[randomIndex];
+            
+            // 填入输入框
+            topicInput.value = randomWord;
+            
+            // 自动切换到隐藏状态（如果当前是显示的）
+            if (topicInput.type === 'text') {
+                topicInput.type = 'password';
+                toggleBtn.innerText = '显示题目';
+            }
+            
+            // 如果画布是空的，清空一下方便重新画
+            clearCanvasConfirm();
+        }
+
+        // 抽题时静默清空画布（不需要弹窗确认）
+        function clearCanvasConfirm() {
+            ctx.fillStyle = BG_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            hintText.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

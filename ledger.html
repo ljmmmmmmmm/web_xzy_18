@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记账本 - WH1L2X</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #121212; color: #ffffff; line-height: 1.6; }
+        header { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); position: sticky; top: 0; z-index: 100; }
+        nav { max-width: 600px; margin: 0 auto; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { text-decoration: none; color: #ffffff; font-weight: 500; }
+        .back-btn:hover { opacity: 0.7; }
+        .logo { font-size: 1.2rem; font-weight: bold; color: #ffffff; text-decoration: none; }
+
+        .ledger-section { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #1e1e1e; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+        
+        /* 顶部统计数据 */
+        .summary { display: flex; justify-content: space-between; text-align: center; padding-bottom: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .summary-item { flex: 1; }
+        .summary-item span { display: block; font-size: 0.85rem; color: #a1a1a6; }
+        .summary-item strong { font-size: 1.2rem; font-weight: 600; }
+        .expense-text { color: #a1a1a6 !important; } /* 支出用灰色显示 */
+        .income-text { color: #ffffff !important; } /* 收入用白色显示 */
+
+        /* 添加表单 */
+        .add-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row select, .form-row input {
+            flex: 1; padding: 12px; font-size: 1rem; background-color: #2c2c2e;
+            color: #ffffff; border: 1px solid #444; border-radius: 8px; outline: none;
+        }
+        .form-row select:focus, .form-row input:focus { border-color: #ffffff; }
+        .btn { padding: 14px; background-color: #ffffff; color: #000; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn:hover { background-color: #ccc; }
+
+        /* 列表区域 */
+        .record-list { list-style: none; }
+        .record-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; }
+        .record-item:last-child { border-bottom: none; }
+        .record-info { flex: 1; }
+        .record-note { font-size: 1rem; color: #fff; }
+        .record-date { font-size: 0.8rem; color: #888; margin-top: 4px; }
+        
+        /* 金额和删除按钮 */
+        .record-right { display: flex; align-items: center; gap: 15px; }
+        .record-amount { font-size: 1.1rem; font-weight: bold; }
+        
+        /* 删除按钮（很隐蔽，防止误触） */
+        .delete-btn { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: color 0.2s; }
+        .delete-btn:hover { color: #ff4d4d; }
+
+        footer { text-align: center; padding: 30px 20px; color: #888; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="secret.html" class="back-btn">← 返回</a>
+            <a href="index.html" class="logo">Wh1L2X</a>
+        </nav>
+    </header>
+
+    <section class="ledger-section">
+        <!-- 统计面板 -->
+        <div class="summary">
+            <div class="summary-item">
+                <span>总收入</span>
+                <strong class="income-text" id="totalIncome">¥0.00</strong>
+            </div>
+            <div class="summary-item">
+                <span>总支出</span>
+                <strong class="expense-text" id="totalExpense">¥0.00</strong>
+            </div>
+            <div class="summary-item">
+                <span>结余</span>
+                <strong id="totalBalance">¥0.00</strong>
+            </div>
+        </div>
+
+        <!-- 记账表单 -->
+        <div class="add-form">
+            <div class="form-row">
+                <select id="typeInput">
+                    <option value="expense">支出</option>
+                    <option value="income">收入</option>
+                </select>
+                <input type="number" id="amountInput" placeholder="金额 (¥)" step="0.01">
+            </div>
+            <div class="form-row">
+                <input type="text" id="noteInput" placeholder="备注 (例如：买奶茶)">
+            </div>
+            <button class="btn" onclick="addRecord()">添加记录</button>
+        </div>
+
+        <!-- 历史记录列表 -->
+        <ul class="record-list" id="recordList">
+            <!-- JS 动态生成 -->
+        </ul>
+    </section>
+
+    <footer><p>&copy; 林家铭永远爱徐紫仪</p></footer>
+
+    <script>
+        // 从本地存储读取数据，如果没有则初始化为空数组
+        let records = JSON.parse(localStorage.getItem('myLedger')) || [];
+
+        // 渲染页面
+        function renderLedger() {
+            const list = document.getElementById('recordList');
+            list.innerHTML = ''; // 清空列表
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            // 倒序遍历（让最新的记录显示在最上面）
+            for (let i = records.length - 1; i >= 0; i--) {
+                const record = records[i];
+                const amount = parseFloat(record.amount);
+                
+                // 计算总额
+                if (record.type === 'income') {
+                    totalIncome += amount;
+                } else {
+                    totalExpense += amount;
+                }
+
+                // 创建列表项
+                const li = document.createElement('li');
+                li.className = 'record-item';
+                
+                // 格式化金额符号
+                const sign = record.type === 'income' ? '+' : '-';
+                const color = record.type === 'income' ? '#ffffff' : '#a1a1a6'; // 收入白，支出灰
+
+                li.innerHTML = `
+                    <div class="record-info">
+                        <div class="record-note">${record.note || '无备注'}</div>
+                        <div class="record-date">${record.date}</div>
+                    </div>
+                    <div class="record-right">
+                        <div class="record-amount" style="color: ${color};">${sign}¥${amount.toFixed(2)}</div>
+                        <button class="delete-btn" onclick="deleteRecord(${record.id})">×</button>
+                    </div>
+                `;
+                list.appendChild(li);
+            }
+
+            // 更新统计数据
+            document.getElementById('totalIncome').innerText = `¥${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpense').innerText = `¥${totalExpense.toFixed(2)}`;
+            
+            const balance = totalIncome - totalExpense;
+            document.getElementById('totalBalance').innerText = `¥${balance.toFixed(2)}`;
+            // 结余为负数时变色，正数时白色
+            document.getElementById('totalBalance').style.color = balance < 0 ? '#ff4d4d' : '#ffffff';
+        }
+
+        // 添加记录
+        function addRecord() {
+            const type = document.getElementById('typeInput').value;
+            const amountInput = document.getElementById('amountInput');
+            const noteInput = document.getElementById('noteInput');
+            
+            const amount = parseFloat(amountInput.value);
+            const note = noteInput.value.trim();
+
+            if (!amount || amount <= 0) {
+                alert('请输入正确的金额！');
+                return;
+            }
+
+            // 获取当前时间
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+            // 创建新记录
+            const newRecord = {
+                id: Date.now(), // 用时间戳作为唯一 ID
+                type: type,
+                amount: amount,
+                note: note,
+                date: dateStr
+            };
+
+            records.push(newRecord);
+            
+            // 保存到本地存储
+            localStorage.setItem('myLedger', JSON.stringify(records));
+
+            // 清空输入框
+            amountInput.value = '';
+            noteInput.value = '';
+
+            // 重新渲染
+            renderLedger();
+        }
+
+        // 删除记录
+        function deleteRecord(id) {
+            if (confirm('确定要删除这条记录吗？')) {
+                // 过滤掉要删除的项
+                records = records.filter(record => record.id !== id);
+                localStorage.setItem('myLedger', JSON.stringify(records));
+                renderLedger();
+            }
+        }
+
+        // 页面加载时自动渲染
+        renderLedger();
+    </script>
+</body>
+</html>

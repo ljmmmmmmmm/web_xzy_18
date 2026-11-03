@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单分类 - WH1L2X</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #121212; color: #ffffff; line-height: 1.6; }
+        header { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); position: sticky; top: 0; z-index: 100; }
+        nav { max-width: 1000px; margin: 0 auto; padding: 20px; display: flex; justify-content: center; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #ffffff; text-decoration: none; }
+
+        .menu-section { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #1e1e1e; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+        .menu-header { text-align: center; margin-bottom: 30px; }
+        .menu-header h2 { font-size: 1.8rem; color: #ffffff; }
+        .menu-header p { color: #a1a1a6; font-size: 0.95rem; margin-top: 5px; }
+
+        .category-list { display: flex; flex-direction: column; gap: 15px; }
+        
+        /* 分类按钮样式：深灰底，白字，悬停变浅灰 */
+        .category-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: #2c2c2e;
+            border: 1px solid #444444;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .category-btn:hover {
+            background-color: #3a3a3c;
+            border-color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+        }
+        .category-btn span.arrow { color: #ffffff; font-weight: bold; }
+
+        footer { text-align: center; padding: 30px 20px; color: #888888; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <a href="index.html" class="logo">WH1L2X</a>
+        </nav>
+    </header>
+
+    <section class="menu-section">
+        <div class="menu-header">
+            <h2>🍽️ 我的拿手好菜</h2>
+            <p>请选择一个分类查看菜品</p>
+        </div>
+        
+        <div class="category-list">
+            <a href="stir-fry.html" class="category-btn"><span>🔥 炒菜</span><span class="arrow">→</span></a>
+            <a href="soup.html" class="category-btn"><span>🍲 汤</span><span class="arrow">→</span></a>
+            <a href="salad.html" class="category-btn"><span>🥗 凉拌菜</span><span class="arrow">→</span></a>
+            <a href="drinks.html" class="category-btn"><span>🍹 饮品</span><span class="arrow">→</span></a>
+            <a href="baking.html" class="category-btn"><span>🥐 烘焙</span><span class="arrow">→</span></a>
+            <a href="dessert.html" class="category-btn"><span>🍰 甜点</span><span class="arrow">→</span></a>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 林家铭永远爱徐紫仪</p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WH1L2X</title>
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #121212; /* 黑色背景 */
+            color: #ffffff; /* 白色文字 */
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        header {
+            background-color: #1e1e1e; /* 深灰卡片 */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); /* 加深阴影 */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffffff; /* 白色 Logo */
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .logo:hover {
+            opacity: 0.7;
+        }
+
+        /* 欢迎区域（英雄区） */
+        .hero {
+            max-width: 1000px;
+            margin: 80px auto;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: #ffffff; /* 白色标题 */
+            margin-bottom: 20px;
+        }
+
+        /* 黑白渐变文字效果 */
+        .hero h1 span {
+            background: linear-gradient(90deg, #ffffff, #888888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #a1a1a6; /* 浅灰色文字 */
+            margin-bottom: 40px;
+        }
+
+        /* 按钮组 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px; 
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #ffffff; /* 白底 */
+            color: #000000; /* 黑字 */
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #cccccc; /* 悬停变浅灰 */
+            transform: translateY(-2px);
+        }
+
+        /* 次要按钮样式（黑底白字白边框） */
+        .btn-secondary {
+            background-color: transparent;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 底部版权 */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888888;
+            font-size: 0.9rem;
+            border-top: 1px solid #333333; /* 深灰边框 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部导航 -->
+    <header>
+        <nav>
+            <a href="index.html" class="logo">WH1L2X</a>
+        </nav>
+    </header>
+
+    <!-- 欢迎区域 -->
+    <section class="hero" id="home">
+        <h1>蓝桉已遇释槐鸟<br><span>不爱万物唯爱你</span></h1>
+        <p>美丽可爱性感迷人聪慧机灵高挑粘人帅气的徐紫仪女士，18岁生日快乐！</p>
+        
+        <div class="btn-group">
+            <a href="login.html" class="btn">210</a>
+            <a href="menu.html" class="btn btn-secondary">菜单</a>
+        </div>
+    </section>
+
+    <!-- 底部 -->
+    <footer>
+        <p>&copy; 林家铭永远爱徐紫仪</p>
+    </footer>
+
+</body>
+</html>

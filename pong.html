@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>双人弹球 - WH1L2X</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #121212; color: #ffffff; line-height: 1.6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        header { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); z-index: 100; flex-shrink: 0; }
+        nav { max-width: 800px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { text-decoration: none; color: #ffffff; font-weight: 500; font-size: 0.95rem; }
+        .back-btn:hover { opacity: 0.7; }
+        .logo { font-size: 1.2rem; font-weight: bold; color: #ffffff; text-decoration: none; }
+
+        /* 主容器 */
+        .game-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        canvas { display: block; touch-action: none; background-color: #000; }
+
+        /* 遮罩层（用于开始和结束提示） */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(18, 18, 18, 0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; text-align: center; z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+
+        /* 表单样式 */
+        .setup-box { max-width: 400px; width: 100%; background-color: #1e1e1e; padding: 30px; border-radius: 16px; border: 1px solid #444; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .setup-box h2 { margin-bottom: 20px; font-size: 1.5rem; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 0.85rem; color: #a1a1a6; margin-bottom: 5px; }
+        .input-group input {
+            width: 100%; padding: 12px; font-size: 1rem; background-color: #2c2c2e;
+            color: #fff; border: 1px solid #444; border-radius: 8px; outline: none;
+        }
+        .input-group input:focus { border-color: #fff; }
+
+        .btn { width: 100%; padding: 14px; background-color: #fff; color: #000; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn:hover { background-color: #ccc; }
+
+        /* 结束结算样式 */
+        .result-box h2 { font-size: 2rem; margin-bottom: 10px; }
+        .result-box p { color: #a1a1a6; margin-bottom: 20px; }
+        .punish-text { font-size: 1.2rem; color: #fff; background-color: #2c2c2e; padding: 15px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ff4d4d; word-break: break-all; text-align: left;}
+
+        /* 移动端操作提示 */
+        .mobile-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #444; font-size: 0.8rem; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="secret.html" class="back-btn">← 返回</a>
+            <a href="index.html" class="logo">WH1L2X</a>
+        </nav>
+    </header>
+
+    <div class="game-container">
+        <!-- 游戏画布 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 准备界面 (开始前) -->
+        <div class="overlay" id="setupOverlay">
+            <div class="setup-box">
+                <h2>🏓 双人弹球</h2>
+                <p style="font-size:0.85rem; color:#a1a1a6; margin-bottom:20px; text-align:left;">
+                    电脑操作：左边 W/S 键，右边 I/K 键。<br>
+                    手机操作：在屏幕左/右半边上下滑动。<br>
+                    提示：球速会越来越快！
+                </p>
+                
+                <div class="input-group">
+                    <label>左玩家（输了的惩罚）</label>
+                    <input type="text" id="leftPunishInput" placeholder="例如：学猫叫三声" value="打扫卫生">
+                </div>
+                <div class="input-group">
+                    <label>右玩家（输了的惩罚）</label>
+                    <input type="text" id="rightPunishInput" placeholder="例如：请喝一杯奶茶" value="请客吃饭">
+                </div>
+
+                <button class="btn" onclick="startGame()">开始游戏</button>
+            </div>
+        </div>
+
+        <!-- 结束界面 -->
+        <div class="overlay hidden" id="resultOverlay">
+            <div class="result-box">
+                <h2 id="winnerText">左玩家 获胜！</h2>
+                <p>失败方的惩罚是：</p>
+                <div class="punish-text" id="punishText">打扫卫生</div>
+                <button class="btn" onclick="resetToSetup()">再来一局</button>
+            </div>
+        </div>
+        
+        <div class="mobile-hint">请在左/右半屏滑动挡板</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const setupOverlay = document.getElementById('setupOverlay');
+        const resultOverlay = document.getElementById('resultOverlay');
+        
+        // 游戏变量
+        let gameLoopId;
+        let isPlaying = false;
+        
+        // 画布尺寸与适配
+        let cw, ch;
+        function resizeCanvas() {
+            cw = canvas.width = canvas.parentElement.clientWidth;
+            ch = canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 游戏对象
+        const paddleWidth = 12;
+        const paddleHeight = 100;
+        const ballRadius = 8;
+        
+        let leftPaddle, rightPaddle, ball;
+
+        // 键盘状态 (修改为 w/s/i/k)
+        const keys = { w: false, s: false, i: false, k: false };
+        
+        // 触摸高度（用于手机操控）
+        let leftTouchY = null;
+        let rightTouchY = null;
+
+        // 初始化游戏数据
+        function initObjects() {
+            leftPaddle = { x: 20, y: ch/2 - paddleHeight/2, speed: 8 };
+            rightPaddle = { x: cw - 20 - paddleWidth, y: ch/2 - paddleHeight/2, speed: 8 };
+            
+            // 小球初始位置在中间，随机方向
+            const angle = (Math.random() * Math.PI / 2) - Math.PI / 4; // -45度 到 45度
+            // 🚀 降低初始速度：从原来的 6 改为 4
+            const speed = 4; 
+            const directionX = Math.random() > 0.5 ? 1 : -1;
+            
+            ball = {
+                x: cw / 2,
+                y: ch / 2,
+                vx: speed * directionX,
+                vy: speed * Math.tan(angle)
+            };
+        }
+
+        // 键盘事件监听 (兼容大小写)
+        document.addEventListener('keydown', e => { 
+            const key = e.key.toLowerCase(); 
+            if(keys.hasOwnProperty(key)) keys[key] = true; 
+        });
+        document.addEventListener('keyup', e => { 
+            const key = e.key.toLowerCase(); 
+            if(keys.hasOwnProperty(key)) keys[key] = false; 
+        });
+
+        // 触摸控制事件
+        canvas.addEventListener('touchstart', handleTouch, {passive: false});
+        canvas.addEventListener('touchmove', handleTouch, {passive: false});
+        canvas.addEventListener('touchend', () => { leftTouchY = null; rightTouchY = null; });
+
+        function handleTouch(e) {
+            if(!isPlaying) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                if (x < cw / 2) {
+                    leftTouchY = y; // 左半屏控制左挡板
+                } else {
+                    rightTouchY = y; // 右半屏控制右挡板
+                }
+            }
+        }
+
+        // 开始游戏
+        function startGame() {
+            setupOverlay.classList.add('hidden');
+            resultOverlay.classList.add('hidden');
+            initObjects();
+            isPlaying = true;
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            gameLoop();
+        }
+
+        // 重置到准备界面
+        function resetToSetup() {
+            isPlaying = false;
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            resultOverlay.classList.add('hidden');
+            setupOverlay.classList.remove('hidden');
+            // 清空画布
+            ctx.clearRect(0, 0, cw, ch);
+        }
+
+        // 结束游戏
+        function endGame(winner) {
+            isPlaying = false;
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+
+            const leftPunish = document.getElementById('leftPunishInput').value || '无惩罚';
+            const rightPunish = document.getElementById('rightPunishInput').value || '无惩罚';
+
+            const winnerText = document.getElementById('winnerText');
+            const punishText = document.getElementById('punishText');
+
+            if (winner === 'left') {
+                winnerText.innerText = '左边玩家 获胜！';
+                punishText.innerText = `右边玩家接受惩罚：${rightPunish}`;
+            } else {
+                winnerText.innerText = '右边玩家 获胜！';
+                punishText.innerText = `左边玩家接受惩罚：${leftPunish}`;
+            }
+
+            resultOverlay.classList.remove('hidden');
+        }
+
+        // 核心游戏循环
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            update();
+            draw();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // 1. 挡板移动 (键盘)
+            if (keys.w && leftPaddle.y > 0) leftPaddle.y -= leftPaddle.speed;
+            if (keys.s && leftPaddle.y < ch - paddleHeight) leftPaddle.y += leftPaddle.speed;
+            
+            // 右边玩家改为 I 和 K
+            if (keys.i && rightPaddle.y > 0) rightPaddle.y -= rightPaddle.speed;
+            if (keys.k && rightPaddle.y < ch - paddleHeight) rightPaddle.y += rightPaddle.speed;
+
+            // 2. 挡板移动 (触摸)
+            if (leftTouchY !== null) {
+                leftPaddle.y = leftTouchY - paddleHeight / 2;
+                if (leftPaddle.y < 0) leftPaddle.y = 0;
+                if (leftPaddle.y > ch - paddleHeight) leftPaddle.y = ch - paddleHeight;
+            }
+            if (rightTouchY !== null) {
+                rightPaddle.y = rightTouchY - paddleHeight / 2;
+                if (rightPaddle.y < 0) rightPaddle.y = 0;
+                if (rightPaddle.y > ch - paddleHeight) rightPaddle.y = ch - paddleHeight;
+            }
+
+            // 3. 小球移动
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // 4. 上下墙壁反弹
+            if (ball.y - ballRadius < 0) {
+                ball.y = ballRadius;
+                ball.vy = -ball.vy;
+            } else if (ball.y + ballRadius > ch) {
+                ball.y = ch - ballRadius;
+                ball.vy = -ball.vy;
+            }
+
+            // 防穿模最大速度限制 (18为极速)
+            const maxSpeed = 18;
+            
+            // 5. 左右挡板碰撞
+            // 左挡板
+            if (ball.x - ballRadius < leftPaddle.x + paddleWidth && 
+                ball.x - ballRadius > leftPaddle.x &&
+                ball.y > leftPaddle.y && 
+                ball.y < leftPaddle.y + paddleHeight && 
+                ball.vx < 0) {
+                
+                ball.vx = -ball.vx;
+                ball.x = leftPaddle.x + paddleWidth + ballRadius; // 防止卡进挡板
+                
+                // 计算击中位置偏差，改变Y速度
+                let deltaY = ball.y - (leftPaddle.y + paddleHeight / 2);
+                ball.vy = deltaY * 0.2;
+
+                // 🚀 新增：每次碰撞，速度增加 5% (并限制最大值)
+                ball.vx *= 1.05;
+                ball.vy *= 1.05;
+                if (Math.abs(ball.vx) > maxSpeed) ball.vx = maxSpeed * Math.sign(ball.vx);
+                if (Math.abs(ball.vy) > maxSpeed) ball.vy = maxSpeed * Math.sign(ball.vy);
+            }
+
+            // 右挡板
+            if (ball.x + ballRadius > rightPaddle.x && 
+                ball.x + ballRadius < rightPaddle.x + paddleWidth &&
+                ball.y > rightPaddle.y && 
+                ball.y < rightPaddle.y + paddleHeight && 
+                ball.vx > 0) {
+                
+                ball.vx = -ball.vx;
+                ball.x = rightPaddle.x - ballRadius;
+                
+                let deltaY = ball.y - (rightPaddle.y + paddleHeight / 2);
+                ball.vy = deltaY * 0.2;
+
+                // 🚀 新增：每次碰撞，速度增加 5% (并限制最大值)
+                ball.vx *= 1.05;
+                ball.vy *= 1.05;
+                if (Math.abs(ball.vx) > maxSpeed) ball.vx = maxSpeed * Math.sign(ball.vx);
+                if (Math.abs(ball.vy) > maxSpeed) ball.vy = maxSpeed * Math.sign(ball.vy);
+            }
+
+            // 6. 判断输赢 (碰出左右边界)
+            if (ball.x - ballRadius < 0) {
+                endGame('right'); // 左边没接住，右边赢
+            } else if (ball.x + ballRadius > cw) {
+                endGame('left');  // 右边没接住，左边赢
+            }
+        }
+
+        // 绘制画面
+        function draw() {
+            ctx.clearRect(0, 0, cw, ch);
+            
+            // 画中场虚线
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.setLineDash([10, 10]);
+            ctx.moveTo(cw / 2, 0);
+            ctx.lineTo(cw / 2, ch);
+            ctx.stroke();
+            ctx.setLineDash([]); // 恢复实线
+
+            // 画挡板
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(leftPaddle.x, leftPaddle.y, paddleWidth, paddleHeight);
+            ctx.fillRect(rightPaddle.x, rightPaddle.y, paddleWidth, paddleHeight);
+
+            // 画小球
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.closePath();
+        }
+    </script>
+</body>
+</html>
